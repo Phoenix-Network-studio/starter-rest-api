@@ -1,72 +1,57 @@
-const express = require('express')
-const app = express()
-const db = require('@cyclic.sh/dynamodb')
+const express = require('express');
+const bodyParser = require('body-parser');
 
-app.use(express.json())
-app.use(express.urlencoded({ extended: true }))
+const app = express();
+const port = 3000;
 
-// #############################################################################
-// This configures static hosting for files in /public that have the extensions
-// listed in the array.
-// var options = {
-//   dotfiles: 'ignore',
-//   etag: false,
-//   extensions: ['htm', 'html','css','js','ico','jpg','jpeg','png','svg'],
-//   index: ['index.html'],
-//   maxAge: '1m',
-//   redirect: false
-// }
-// app.use(express.static('public', options))
-// #############################################################################
+// Beispiel-Datenbank als JavaScript-Array
+let books = [
+  { id: 1, title: "Harry Potter and the Philosopher's Stone", author: "J.K. Rowling" },
+  { id: 2, title: "The Great Gatsby", author: "F. Scott Fitzgerald" },
+  { id: 3, title: "To Kill a Mockingbird", author: "Harper Lee" }
+];
 
-// Create or Update an item
-app.post('/:col/:key', async (req, res) => {
-  console.log(req.body)
+app.use(bodyParser.json());
 
-  const col = req.params.col
-  const key = req.params.key
-  console.log(`from collection: ${col} delete key: ${key} with params ${JSON.stringify(req.params)}`)
-  const item = await db.collection(col).set(key, req.body)
-  console.log(JSON.stringify(item, null, 2))
-  res.json(item).end()
-})
+// API-Endpunkt zum Abrufen aller Bücher
+app.get('/books', (req, res) => {
+  res.json(books);
+});
 
-// Delete an item
-app.delete('/:col/:key', async (req, res) => {
-  const col = req.params.col
-  const key = req.params.key
-  console.log(`from collection: ${col} delete key: ${key} with params ${JSON.stringify(req.params)}`)
-  const item = await db.collection(col).delete(key)
-  console.log(JSON.stringify(item, null, 2))
-  res.json(item).end()
-})
+// API-Endpunkt zum Abrufen eines einzelnen Buches anhand der ID
+app.get('/books/:id', (req, res) => {
+  const bookId = parseInt(req.params.id);
+  const book = books.find(book => book.id === bookId);
+  if (book) {
+    res.json(book);
+  } else {
+    res.status(404).json({ message: 'Book not found' });
+  }
+});
 
-// Get a single item
-app.get('/:col/:key', async (req, res) => {
-  const col = req.params.col
-  const key = req.params.key
-  console.log(`from collection: ${col} get key: ${key} with params ${JSON.stringify(req.params)}`)
-  const item = await db.collection(col).get(key)
-  console.log(JSON.stringify(item, null, 2))
-  res.json(item).end()
-})
+// API-Endpunkt zum Hinzufügen eines neuen Buches
+app.post('/books', (req, res) => {
+  const { id, title, author } = req.body;
+  const newBook = { id, title, author };
+  books.push(newBook);
+  res.status(201).json(newBook);
+});
 
-// Get a full listing
-app.get('/:col', async (req, res) => {
-  const col = req.params.col
-  console.log(`list collection: ${col} with params: ${JSON.stringify(req.params)}`)
-  const items = await db.collection(col).list()
-  console.log(JSON.stringify(items, null, 2))
-  res.json(items).end()
-})
+// API-Endpunkt zum Aktualisieren eines Buches anhand der ID
+app.put('/books/:id', (req, res) => {
+  const bookId = parseInt(req.params.id);
+  const updatedBook = req.body;
+  books = books.map(book => (book.id === bookId ? updatedBook : book));
+  res.json(updatedBook);
+});
 
-// Catch all handler for all other request.
-app.use('*', (req, res) => {
-  res.json({ msg: 'no route handler found' }).end()
-})
+// API-Endpunkt zum Löschen eines Buches anhand der ID
+app.delete('/books/:id', (req, res) => {
+  const bookId = parseInt(req.params.id);
+  books = books.filter(book => book.id !== bookId);
+  res.sendStatus(204);
+});
 
-// Start the server
-const port = process.env.PORT || 3000
 app.listen(port, () => {
-  console.log(`index.js listening on ${port}`)
-})
+  console.log(`Server is running on port ${port}`);
+});
